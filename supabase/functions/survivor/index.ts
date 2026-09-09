@@ -76,7 +76,7 @@ function currentWeek(games: Game[], now: Date) {
   for (let w = 1; w <= 18; w++) if (weekComplete(games, w)) byGrade = w + 1;
   return Math.min(18, Math.max(byTime, byGrade));
 }
-function compute(settings: any, players: Player[], picks: Pick[], games: Game[]) {
+function compute(settings: any, players: Player[], picks: Pick[], games: Game[], now: Date = new Date()) {
   const rules = settings.rules || {};
   const tieIsLoss = (rules.tie || "loss") === "loss";
   const missedIsLoss = (rules.missed_pick || "loss") === "loss";
@@ -90,7 +90,9 @@ function compute(settings: any, players: Player[], picks: Pick[], games: Game[])
     const gs = games.filter((g) => g.week === w);
     const anyResult = gs.some((g) => g.status !== "scheduled");
     const complete = weekComplete(games, w);
-    if (!anyResult && !complete) continue;
+    // Once the last game of the week (MNF) has kicked off, nobody can pick anymore -> no pick = missed.
+    const allKickedOff = gs.length > 0 && gs.every((g) => Date.parse(g.kickoff) <= now.getTime());
+    if (!anyResult && !complete && !allKickedOff) continue;
     const outcome: Record<string, string> = {};
     for (const g of gs) {
       if (g.status !== "final") continue;
@@ -103,7 +105,7 @@ function compute(settings: any, players: Player[], picks: Pick[], games: Game[])
       if (s.eliminated_week !== null) continue;
       const pick = pickOf(p.id, w);
       if (!pick) {
-        if (complete && missedIsLoss) { s.weeks[w] = { pick: null, result: "MISS" }; losers.push(p.id); }
+        if ((complete || allKickedOff) && missedIsLoss) { s.weeks[w] = { pick: null, result: "MISS" }; losers.push(p.id); }
         else s.weeks[w] = { pick: null, result: null };
         continue;
       }
@@ -179,7 +181,7 @@ async function buildState(me: Player | null) {
   if (await autoRefresh(all.games, now)) all = await loadAll();
   const { settings, players, picks, games } = all;
   const cw = currentWeek(games, now);
-  const { st, notes } = compute(settings, players, picks, games);
+  const { st, notes } = compute(settings, players, picks, games, now);
   const kickoffOf = (w: number, t: string) => games.find((g) => g.week === w && (g.away === t || g.home === t))?.kickoff;
   const schedule: Record<string, [string, string, string][]> = {};
   const results: Record<string, any> = {};
@@ -272,7 +274,7 @@ async function handlePick(body: any) {
   const cw = currentWeek(games, now);
   const week = Number(body?.week || cw);
   if (week !== cw) return fail(`Picks are open for Week ${cw} only.`);
-  const { st } = compute(settings, players, picks, games);
+  const { st } = compute(settings, players, picks, games, now);
   if (st[me.id].eliminated_week !== null) return fail("You've been eliminated — no more picks. Better luck next year!");
   const g = games.find((x) => x.week === week && (x.away === team || x.home === team));
   if (!g) return fail(`${TEAMS[team]} don't play in Week ${week} (bye week).`);
@@ -418,7 +420,7 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET" && (path === "/" || path === "" || path === "/index.html")) {
       // The website itself is hosted on GitHub Pages (Supabase won't serve HTML from its domain).
-      const site = Deno.env.get("SITE_URL") || "https://github.com";
+      const site = Deno.env.get("SITE_URL") || "https://zekeromero.github.io/family-survivor-pool/";
       return new Response(null, { status: 302, headers: { ...CORS, Location: site } });
     }
     if (path === "/api/state") {
