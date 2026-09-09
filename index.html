@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f6b3a">
+<title>Survivor Pool</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
+<style>
+  :root{
+    --bg:#f5f4ef; --card:#fff; --ink:#1b1b1f; --muted:#5f5f68; --line:#e3e1d9;
+    --accent:#0f6b3a; --accent-ink:#fff; --win:#1a8a4a; --loss:#c73b2e; --tie:#b07d00; --warn-bg:#fff4d6; --warn-ink:#6b4c00;
+    --out:#9a9aa3; --chip:#eeede6; --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.04);
+    --ok-bg:#e3f5ea;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#15161a; --card:#1e1f25; --ink:#ececf0; --muted:#a2a2ae; --line:#2d2e36;
+      --accent:#3fbf7a; --accent-ink:#0d1a12; --win:#3fbf7a; --loss:#ef6a5c; --tie:#e0b040; --warn-bg:#3a2f10; --warn-ink:#ffd97a;
+      --out:#6a6a76; --chip:#2a2b33; --shadow:none; --ok-bg:#173524; }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(84px + env(safe-area-inset-bottom))}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+  h1{margin:0;font-size:24px;letter-spacing:-.01em;line-height:1.2}
+  .sub{color:var(--muted);font-size:15px}
+  .who{font-size:15px;color:var(--muted);text-align:right;white-space:nowrap}
+  .who a{color:var(--accent);text-decoration:none;font-weight:600}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+  h2{margin:0 0 10px;font-size:20px}
+  h3{margin:18px 0 8px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  p{margin:8px 0}
+  .big{font-size:22px;font-weight:700}
+  .note{background:var(--chip);border-radius:12px;padding:12px 14px;font-size:16px;margin:10px 0}
+  .warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:12px;padding:12px 14px;font-size:17px;font-weight:600;margin:10px 0}
+  .ok{background:var(--ok-bg);border-radius:12px;padding:14px;margin:10px 0}
+  .err{color:var(--loss);font-weight:600;margin:8px 0}
+  /* buttons */
+  button{font:inherit;cursor:pointer}
+  .btn{display:block;width:100%;min-height:58px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-size:20px;font-weight:700;padding:12px 16px;margin:8px 0}
+  .btn.secondary{background:var(--chip);color:var(--ink);font-weight:600}
+  .btn.danger{background:var(--loss);color:#fff}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.small{min-height:44px;font-size:16px;width:auto;display:inline-block;padding:8px 14px;margin:4px 6px 4px 0}
+  .namebtn{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font-size:21px;font-weight:700;padding:12px 16px;margin:8px 0;text-align:left}
+  .namebtn:active{border-color:var(--accent)}
+  .namebtn small{margin-left:auto;font-size:14px;font-weight:500;color:var(--muted)}
+  input.pin{font:inherit;font-size:32px;letter-spacing:.35em;text-align:center;width:100%;max-width:260px;padding:12px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);display:block;margin:12px auto}
+  input.pin:focus{outline:none;border-color:var(--accent)}
+  input.txt,select.txt{font:inherit;font-size:17px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+  /* matchups */
+  .game{border:1px solid var(--line);border-radius:14px;padding:10px 12px 12px;margin:10px 0}
+  .game .when{font-size:15px;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+  .teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}
+  .teams .at{align-self:center;color:var(--muted);font-size:14px;font-weight:700}
+  .team{border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-height:74px;padding:8px 10px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}
+  .team b{font-size:19px;line-height:1.15;display:flex;align-items:center;gap:8px}
+  .team small{font-size:13px;color:var(--muted)}
+  .team.dis{opacity:.45;cursor:not-allowed}
+  .team.dis b{text-decoration:line-through}
+  .team.mine{border-color:var(--win);background:var(--ok-bg)}
+  .team.won b{color:var(--win)} .team.lost{opacity:.6}
+  .dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex:none;border:1px solid rgba(0,0,0,.15)}
+  .score{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:auto}
+  /* chips */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .t{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:4px 9px;border-radius:8px;background:var(--chip)}
+  .t .dot{width:10px;height:10px}
+  .t.W{outline:2px solid var(--win)} .t.L{outline:2px solid var(--loss);text-decoration:line-through} .t.T{outline:2px solid var(--tie)} .t.MISS{outline:2px dashed var(--loss)}
+  .t small{font-weight:400;color:var(--muted)}
+  /* standings */
+  .pl{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0}
+  .pl.out{opacity:.55}
+  .pl .nm{font-weight:700;font-size:19px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .badge{font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--win);color:#fff;white-space:nowrap}
+  .badge.out{background:var(--out)} .badge.pend{background:var(--tie)}
+  .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .stat{flex:1;min-width:90px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow)}
+  .stat b{display:block;font-size:24px;line-height:1.1}
+  .stat span{font-size:13px;color:var(--muted)}
+  /* grid */
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;font-size:14px;white-space:nowrap}
+  th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:center}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  td:first-child,th:first-child{text-align:left;position:sticky;left:0;background:var(--card);font-weight:700}
+  td.cur{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+  tr.out td{color:var(--out)}
+  .W{color:var(--win)} .L{color:var(--loss)} .T{color:var(--tie)} .MISS{color:var(--loss)}
+  .rules li{margin:8px 0}
+  /* tabs */
+  nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:5}
+  nav button{flex:1;background:none;border:0;color:var(--muted);font-size:13px;font-weight:600;padding:6px 2px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+  nav button .ic{font-size:22px;line-height:1}
+  nav button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+  section{display:none} section.on{display:block}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:10;padding:12px}
+  .modal.on{display:flex}
+  .sheet{background:var(--card);color:var(--ink);border-radius:20px;padding:22px 20px;width:100%;max-width:480px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .sheet h2{font-size:24px}
+  @media (min-width:600px){ .modal{align-items:center} }
+  footer{color:var(--muted);font-size:13px;margin-top:20px;text-align:center}
+  footer a{color:var(--muted)}
+  .spin{display:inline-block;width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .admin table{font-size:15px;white-space:normal}
+  .admin td,.admin th{text-align:left;vertical-align:middle}
+  .admin td:first-child{position:static}
+  label.lbl{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px}
+  .muted{color:var(--muted)}
+  .center{text-align:center}
+  .huge{font-size:56px;line-height:1;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">Survivor Pool</h1>
+      <div class="sub" id="subtitle">Loading…</div>
+    </div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <div id="loading" class="card center"><span class="spin"></span> Loading the pool…</div>
+
+  <section id="signin"></section>
+  <section id="home"></section>
+  <section id="everyone"></section>
+  <section id="games"></section>
+  <section id="rules"></section>
+  <section id="admin" class="admin"></section>
+
+  <footer id="footer"></footer>
+</div>
+
+<nav id="nav" style="display:none">
+  <button data-s="home"><span class="ic">🏈</span>My Pick</button>
+  <button data-s="everyone"><span class="ic">👨‍👩‍👧‍👦</span>Everyone</button>
+  <button data-s="games"><span class="ic">📺</span>Games</button>
+  <button data-s="rules"><span class="ic">📖</span>Rules</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+
+<script>
+(function(){
+  var API = (window.SURVIVOR_API || 'https://vzhliaszljjjloscbopr.supabase.co/functions/v1/survivor');
+  var COLORS = {ARI:'#97233F',ATL:'#A71930',BAL:'#241773',BUF:'#00338D',CAR:'#0085CA',CHI:'#0B162A',CIN:'#FB4F14',CLE:'#311D00',DAL:'#003594',DEN:'#FB4F14',DET:'#0076B6',GB:'#203731',HOU:'#03202F',IND:'#002C5F',JAX:'#006778',KC:'#E31837',LAC:'#0080C6',LAR:'#003594',LV:'#A5ACAF',MIA:'#008E97',MIN:'#4F2683',NE:'#002244',NO:'#D3BC8D',NYG:'#0B2265',NYJ:'#125740',PHI:'#004C54',PIT:'#FFB612',SEA:'#69BE28',SF:'#AA0000',TB:'#D50A0A',TEN:'#4B92DB',WSH:'#5A1414'};
+  var S = null, ME = null, W = null, cw = 0, now = new Date();
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var nick = function(t){ if(t==='?') return '?'; var n=(S&&S.teams[t])||t; return n.split(' ').pop(); };
+  var full = function(t){ return (S&&S.teams[t])||t; };
+  var dot = function(t){ return '<i class="dot" style="background:'+(COLORS[t]||'#888')+'"></i>'; };
+  var isTBD = function(iso){ var d=new Date(iso); return d.getUTCHours()===5 && d.getUTCMinutes()===0; };
+  var fmtDay = function(iso){ return new Date(iso).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}); };
+  var fmtKick = function(iso){ var d=new Date(iso); if(isTBD(iso)) return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+' · time TBD'; return d.toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); };
+  var fmtTime = function(iso){ var d=new Date(iso); if(isTBD(iso)) return 'time TBD'; return d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); };
+  var money = function(n){ return '$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:0}); };
+  var started = function(iso){ return new Date(iso) <= now; };
+
+  // ---- session ----
+  try{ ME = JSON.parse(localStorage.getItem('surv_me')||'null'); }catch(e){ ME=null; }
+  function saveMe(m){ ME=m; try{ if(m) localStorage.setItem('surv_me',JSON.stringify(m)); else localStorage.removeItem('surv_me'); }catch(e){} }
+
+  // ---- api ----
+  function api(path, body){
+    return fetch(API+path, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
+      .then(function(r){ return r.json().then(function(j){ if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status)); return j; }); });
+  }
+  function loadState(){
+    var p = ME ? api('/api/state',{player_id:ME.id,pin:ME.pin}) : fetch(API+'/api/state').then(function(r){return r.json();});
+    return p.then(function(st){ setState(st); });
+  }
+  function setState(st){
+    S = st; cw = S.current_week; W = String(cw); now = new Date(S.server_time || Date.now());
+    if (ME && !S.me) { saveMe(null); } // PIN changed / player removed
+    if (S.me) ME = {id:S.me.id, name:S.me.name, pin:ME.pin};
+    renderAll();
+  }
+
+  // ---- nav ----
+  function show(id){
+    document.querySelectorAll('section').forEach(function(x){ x.classList.toggle('on', x.id===id); });
+    document.querySelectorAll('nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.s===id); });
+    window.scrollTo(0,0);
+  }
+  $('nav').addEventListener('click', function(e){ var b=e.target.closest('button'); if(b) show(b.dataset.s); });
+
+  function modal(html){ $('sheet').innerHTML = html; $('modal').classList.add('on'); }
+  function closeModal(){ $('modal').classList.remove('on'); }
+  $('modal').addEventListener('click', function(e){ if(e.target===$('modal')) closeModal(); });
+
+  // ---- render ----
+  function renderAll(){
+    $('loading').style.display='none';
+    document.title = S.name;
+    $('title').textContent = S.name;
+    var alive = S.players.filter(function(p){return p.eliminated_week==null;});
+    $('subtitle').textContent = 'Week '+cw+' · '+alive.length+' of '+S.players.length+' still alive'+(S.pot?' · Pot '+money(S.pot):'');
+    var isAdmin = location.hash==='#admin';
+    if (isAdmin){ $('nav').style.display='none'; $('who').innerHTML='<a href="#" id="exitadmin">Exit admin</a>'; $('exitadmin').onclick=function(e){e.preventDefault(); location.hash=''; renderAll();}; renderAdmin(); show('admin'); return; }
+    if (!ME){ $('nav').style.display='none'; $('who').innerHTML=''; renderSignin(); show('signin'); }
+    else {
+      $('nav').style.display='flex';
+      $('who').innerHTML = 'Hi, <b>'+esc(ME.name)+'</b><br><a href="#" id="switch">Not you?</a>';
+      $('switch').onclick=function(e){ e.preventDefault(); saveMe(null); loadState(); };
+      renderHome(); renderEveryone(); renderGames(); renderRules();
+      var cur = document.querySelector('section.on');
+      if (!cur || cur.id==='signin' || cur.id==='admin') show('home');
+    }
+    $('footer').innerHTML = 'Scores update automatically from ESPN. Times shown in your local time zone.'+(S.contact?'<br>Questions? '+esc(S.contact):'')+'<br><a href="#admin" id="adminlink">Commissioner</a>';
+    $('adminlink').onclick=function(){ setTimeout(renderAll,0); };
+  }
+  window.addEventListener('hashchange', function(){ if(S) renderAll(); });
+
+  // ---- sign in (PIN only) / create account ----
+  function finishLogin(r, pin){ saveMe({id:r.player_id,name:r.name,pin:pin}); return loadState(); }
+  function renderSignin(){
+    var h = '<div class="card center"><h2>Enter your PIN</h2><p class="muted">Your 4-digit PIN is all you need.</p>'+
+      '<input class="pin" id="pin" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">'+
+      '<div class="err" id="pinerr"></div>'+
+      '<button class="btn" id="go">Log in</button>'+
+      '<p class="muted" style="font-size:14px">Forgot it? Ask '+esc(S.commissioner||'the commissioner')+' to reset it.</p></div>'+
+      '<div class="card center"><h2>New here?</h2><p class="muted">Takes 10 seconds — just your name and a PIN.</p>'+
+      '<button class="btn secondary" id="signup">Create my account</button></div>';
+    $('signin').innerHTML = h;
+    var go = function(){
+      var pin = $('pin').value.trim();
+      if (!/^\d{4}$/.test(pin)) { $('pinerr').textContent='Please enter your 4 digits.'; return; }
+      $('go').disabled = true; $('go').innerHTML='<span class="spin"></span>';
+      api('/api/login',{pin:pin}).then(function(r){ return finishLogin(r, pin); })
+        .catch(function(e){ $('pinerr').textContent=e.message; $('go').disabled=false; $('go').textContent='Log in'; });
+    };
+    $('go').onclick = go;
+    $('pin').addEventListener('keydown', function(e){ if(e.key==='Enter') go(); });
+    $('pin').addEventListener('input', function(){ if($('pin').value.length===4) go(); });
+    $('signup').onclick = renderSignup;
+    setTimeout(function(){ $('pin').focus(); }, 50);
+  }
+  function renderSignup(){
+    var h = '<div class="card"><h2>Create your account</h2>'+
+      '<label class="lbl" style="font-size:16px">Your name <span class="muted">(how it shows on the board)</span></label>'+
+      '<input class="txt" id="name" type="text" autocomplete="name" placeholder="e.g. Grandpa" style="font-size:20px;padding:12px">'+
+      '<label class="lbl" style="font-size:16px;margin-top:14px">Pick a 4-digit PIN <span class="muted">(you’ll log in with just this)</span></label>'+
+      '<input class="pin" id="pin1" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" style="margin-left:0">'+
+      '<label class="lbl" style="font-size:16px">Type it again</label>'+
+      '<input class="pin" id="pin2" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" style="margin-left:0">'+
+      '<div class="err" id="suerr"></div>'+
+      '<button class="btn" id="create">Create account</button>'+
+      '<button class="btn secondary" id="back">Back to log in</button>'+
+      '<p class="muted" style="font-size:14px">Write your PIN down somewhere — it’s your only login. If you forget it, '+esc(S.commissioner||'the commissioner')+' can reset it.</p></div>';
+    $('signin').innerHTML = h;
+    var go = function(){
+      var name=$('name').value.trim(), p1=$('pin1').value.trim(), p2=$('pin2').value.trim();
+      if (name.length<2) { $('suerr').textContent='Please type your name.'; return; }
+      if (!/^\d{4}$/.test(p1)) { $('suerr').textContent='PIN must be exactly 4 digits.'; return; }
+      if (p1!==p2) { $('suerr').textContent='The two PINs don’t match — try again.'; return; }
+      $('create').disabled=true; $('create').innerHTML='<span class="spin"></span>';
+      api('/api/signup',{name:name,pin:p1}).then(function(r){ return finishLogin(r, p1); })
+        .catch(function(e){ $('suerr').textContent=e.message; $('create').disabled=false; $('create').textContent='Create account'; });
+    };
+    $('create').onclick=go; $('back').onclick=renderSignin;
+    $('pin2').addEventListener('keydown', function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ $('name').focus(); }, 50);
+  }
+
+  // ---- home / my pick ----
+  var changing = false;
+  function me(){ return S.players.filter(function(p){return p.id===ME.id;})[0]; }
+  function renderHome(){
+    var p = me(); if(!p){ $('home').innerHTML=''; return; }
+    var h = '';
+    var games = (S.schedule[W]||[]).slice().sort(function(a,b){return a[0]<b[0]?-1:1;});
+    var myPick = p.picks[W];
+    var myGame = myPick ? games.filter(function(g){return g[1]===myPick||g[2]===myPick;})[0] : null;
+    var used = {}; Object.keys(p.picks).forEach(function(w){ if(w!==W) used[p.picks[w]]=w; });
+
+    if (p.eliminated_week != null){
+      var wk = p.weeks[p.eliminated_week]||{};
+      h += '<div class="card center"><div class="huge">💀</div><h2>You were knocked out in Week '+p.eliminated_week+'</h2>'+
+        '<p>'+(wk.result==='MISS'?'No pick was made that week.':'You picked the <b>'+esc(full(wk.pick))+'</b> and they '+(wk.result==='T'?'tied':'lost')+'.')+'</p>'+
+        '<p class="muted">Thanks for playing — you can still follow along on the Everyone and Games tabs.</p></div>';
+    } else if (S.players.filter(function(x){return x.eliminated_week==null;}).length===1 && S.players.length>1){
+      h += '<div class="card center"><div class="huge">🏆</div><h2>You’re the last one standing!</h2><p>You win the pool'+(S.pot?' — '+money(S.pot):'')+'. Go collect from '+esc(S.commissioner||'the commissioner')+'.</p></div>';
+    } else {
+      h += '<div class="card"><h2>Week '+cw+' — your pick</h2>';
+      if (myPick && !changing){
+        var locked = myGame && started(myGame[0]);
+        var res = (p.weeks[W]||{}).result;
+        h += '<div class="ok"><div class="row"><span class="dot" style="width:22px;height:22px;background:'+(COLORS[myPick]||'#888')+'"></span><span class="big">'+esc(full(myPick))+'</span></div>'+
+          (myGame ? '<div class="muted" style="margin-top:4px">'+(myGame[1]===myPick?'at the '+esc(nick(myGame[2])):'vs the '+esc(nick(myGame[1])))+' · '+fmtKick(myGame[0])+'</div>' : '')+
+          '<div style="margin-top:10px;font-weight:700;color:var(--win)">'+(res==='W'?'✅ They won — you survive!':res==='L'?'❌ They lost.':res==='T'?'🟰 It was a tie.':locked?'🔒 Locked in — game has started':'✓ You’re locked in')+'</div></div>';
+        if (!locked) h += '<button class="btn secondary" id="change">Change my pick</button>';
+      } else {
+        var firstKick = games.length ? games[0][0] : null;
+        var openGames = games.filter(function(g){ return !started(g[0]); });
+        if (!myPick) h += '<div class="warn">⚠️ You haven’t picked yet.'+(firstKick?' First game: '+fmtKick(firstKick)+'.':'')+'</div>';
+        else h += '<div class="note">You currently have the <b>'+esc(full(myPick))+'</b>. Tap a different team to switch.</div>';
+        h += '<p><b>Tap the team you think will WIN.</b> <span class="muted">Each team can only be used once all season.</span></p>';
+        if (changing) h += '<button class="btn secondary" id="cancelchange">Never mind, keep the '+esc(nick(myPick))+'</button>';
+        var lastDay = '';
+        games.forEach(function(g){
+          var day = fmtDay(g[0]);
+          if (day!==lastDay){ h += '<h3>'+esc(day)+'</h3>'; lastDay=day; }
+          var off = started(g[0]);
+          h += '<div class="game"><div class="when"><span>'+esc(fmtTime(g[0]))+(off?' · started':'')+'</span></div><div class="teams">';
+          [g[1],g[2]].forEach(function(t,i){
+            var why = used[t] ? 'Used in week '+used[t] : off ? 'Game started' : (i===0?'away':'home');
+            var dis = !!used[t] || off;
+            var mine = t===myPick;
+            h += '<button class="team'+(dis?' dis':'')+(mine?' mine':'')+'" data-t="'+t+'" '+(dis?'disabled':'')+'><b>'+dot(t)+esc(nick(t))+'</b><small>'+esc(why)+'</small></button>';
+            if (i===0) h += '<div class="at">@</div>';
+          });
+          h += '</div></div>';
+        });
+        if (!openGames.length) h += '<p class="muted">All of this week’s games have started.</p>';
+      }
+      h += '</div>';
+    }
+    // teams used
+    var usedWeeks = Object.keys(p.picks).sort(function(a,b){return a-b;});
+    if (usedWeeks.length){
+      h += '<div class="card"><h2>Your picks so far</h2><div class="chips">'+usedWeeks.map(function(w){
+        var t=p.picks[w], r=(p.weeks[w]||{}).result||'';
+        return '<span class="t '+r+'">'+dot(t)+esc(nick(t))+' <small>wk '+w+(r==='W'?' ✓':r==='L'?' ✗':r==='T'?' =':'')+'</small></span>';
+      }).join('')+'</div></div>';
+    }
+    $('home').innerHTML = h;
+    var ch=$('change'); if(ch) ch.onclick=function(){ changing=true; renderHome(); };
+    var cc=$('cancelchange'); if(cc) cc.onclick=function(){ changing=false; renderHome(); };
+    $('home').querySelectorAll('.team:not(.dis)').forEach(function(b){ b.onclick=function(){ confirmPick(b.dataset.t); }; });
+  }
+  function confirmPick(t){
+    var g = (S.schedule[W]||[]).filter(function(x){return x[1]===t||x[2]===t;})[0];
+    var opp = g[1]===t ? g[2] : g[1];
+    modal('<h2>'+dot(t)+' Pick the '+esc(full(t))+'?</h2>'+
+      '<p>To beat the <b>'+esc(nick(opp))+'</b> — '+esc(fmtKick(g[0]))+'.</p>'+
+      '<p class="muted" style="font-size:15px">You can change your mind until the game starts. If they lose, you’re out.</p>'+
+      '<div class="err" id="perr"></div>'+
+      '<button class="btn" id="yes">Yes, lock in the '+esc(nick(t))+'</button>'+
+      '<button class="btn secondary" id="no">Cancel</button>');
+    $('no').onclick = closeModal;
+    $('yes').onclick = function(){
+      $('yes').disabled=true; $('yes').innerHTML='<span class="spin"></span>';
+      api('/api/pick',{player_id:ME.id,pin:ME.pin,week:cw,team:t}).then(function(r){
+        changing=false;
+        modal('<div class="center"><div class="huge">✅</div><h2>You’ve got the '+esc(nick(t))+'!</h2><p>Week '+cw+' pick saved. Good luck!</p><button class="btn" id="done">Done</button></div>');
+        $('done').onclick=closeModal;
+        setState(r.state);
+      }).catch(function(e){
+        if (/sign in/i.test(e.message)) { saveMe(null); closeModal(); loadState(); return; }
+        $('perr').textContent=e.message; $('yes').disabled=false; $('yes').textContent='Try again';
+      });
+    };
+  }
+
+  // ---- everyone ----
+  function renderEveryone(){
+    var h = '';
+    var alive = S.players.filter(function(p){return p.eliminated_week==null;});
+    if (alive.length===1 && S.players.length>1) h += '<div class="card center"><div class="huge">🏆</div><h2>'+esc(alive[0].name)+' is the last one standing!</h2></div>';
+    if (alive.length===0 && S.players.length) h += '<div class="card"><h2>Nobody survived. Settle it however the family settles things.</h2></div>';
+    h += '<div class="stats"><div class="stat"><b>'+alive.length+'</b><span>still alive</span></div><div class="stat"><b>'+(S.players.length-alive.length)+'</b><span>out</span></div>'+(S.pot?'<div class="stat"><b>'+money(S.pot)+'</b><span>pot</span></div>':'')+'</div>';
+    Object.keys(S.notes).forEach(function(w){ h += '<div class="note">'+esc(S.notes[w])+'</div>'; });
+    var sorted = S.players.slice().sort(function(a,b){ var ea=a.eliminated_week==null?99:a.eliminated_week, eb=b.eliminated_week==null?99:b.eliminated_week; return eb-ea || a.name.localeCompare(b.name); });
+    var anyHidden = S.players.some(function(p){ return p.hidden && p.hidden[W]; });
+    h += '<div class="card"><h2>Standings</h2>'+(anyHidden?'<p class="muted" style="font-size:15px">🔒 Picks stay hidden until that game kicks off.</p>':'');
+    sorted.forEach(function(p){
+      var out = p.eliminated_week!=null, thisPick = p.picks[W];
+      var badge = out ? '<span class="badge out">Out · week '+p.eliminated_week+'</span>' : (thisPick ? '<span class="badge">Alive · picked</span>' : '<span class="badge pend">Alive · needs pick</span>');
+      var chips = Object.keys(p.picks).sort(function(a,b){return a-b;}).map(function(w){
+        var t=p.picks[w], r=(p.weeks[w]||{}).result||'';
+        if (t==='?') return '<span class="t" title="Week '+w+'">🔒 <small>wk '+w+'</small></span>';
+        return '<span class="t '+r+'">'+dot(t)+esc(nick(t))+' <small>wk '+w+'</small></span>';
+      }).join('');
+      h += '<div class="pl'+(out?' out':'')+'"><div class="nm">'+esc(p.name)+(p.id===ME.id?' <span class="muted" style="font-size:14px;font-weight:500">(you)</span>':'')+badge+'</div><div class="chips">'+(chips||'<span class="muted" style="font-size:14px">no picks yet</span>')+'</div>'+
+        (S.rules.strikes>1 && !out ? '<div class="muted" style="font-size:14px;margin-top:6px">'+(S.rules.strikes-p.strikes)+' of '+S.rules.strikes+' lives left</div>':'')+'</div>';
+    });
+    h += '</div>';
+    // grid
+    var weeks=[]; for(var w=1;w<=18;w++) weeks.push(w);
+    h += '<div class="card"><h2>All picks</h2><div class="scroll"><table><thead><tr><th>Player</th>'+weeks.map(function(w){return '<th'+(w===cw?' class="cur"':'')+'>'+w+'</th>';}).join('')+'</tr></thead><tbody>';
+    sorted.forEach(function(p){
+      h += '<tr'+(p.eliminated_week!=null?' class="out"':'')+'><td>'+esc(p.name)+'</td>';
+      weeks.forEach(function(w){
+        var ws=String(w), t=p.picks[ws], r=(p.weeks[ws]||{}).result;
+        var cell = t ? (t==='?'?'🔒':t) : (r==='MISS'?'—':'');
+        var mark = r==='W'?' ✓':r==='L'?' ✗':r==='T'?' =':'';
+        if (p.eliminated_week!=null && w>p.eliminated_week) cell='';
+        h += '<td class="'+(r||'')+(w===cw?' cur':'')+'">'+cell+mark+'</td>';
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div><div class="muted" style="font-size:14px;margin-top:8px">✓ win · ✗ loss · = tie · — no pick · 🔒 hidden until kickoff</div></div>';
+    $('everyone').innerHTML = h;
+  }
+
+  // ---- games ----
+  function renderGames(){
+    var games = (S.schedule[W]||[]).slice().sort(function(a,b){return a[0]<b[0]?-1:1;});
+    var res = S.results[W]; var scores={}; if(res) res.games.forEach(function(g){ scores[g.away+'@'+g.home]=g; });
+    var byTeam = {}; S.players.forEach(function(p){ var t=p.picks[W]; if(t && t!=='?') (byTeam[t]=byTeam[t]||[]).push(p.name+(p.id===ME.id?' (you)':'')); });
+    var h = '<div class="card"><h2>Week '+cw+' games</h2><p class="muted" style="font-size:15px">Scores refresh automatically.'+(S.rules.hide_picks?' Who picked whom shows up once each game starts.':' 👤 shows who picked each team.')+'</p>';
+    var lastDay='';
+    games.forEach(function(g){
+      var a=g[1], hm=g[2], sc=scores[a+'@'+hm];
+      var day = fmtDay(g[0]); if(day!==lastDay){ h+='<h3>'+esc(day)+'</h3>'; lastDay=day; }
+      var fin = sc && sc.status==='final', aw = fin && sc.away_score>sc.home_score, hw = fin && sc.home_score>sc.away_score;
+      var status = sc && sc.status!=='scheduled' ? (sc.status==='live'?'🔴 ':'')+esc(sc.detail||sc.status.toUpperCase()) : fmtTime(g[0]);
+      h += '<div class="game"><div class="when"><span>'+status+'</span></div><div class="teams">';
+      [[a,aw,hw],[hm,hw,aw]].forEach(function(x,i){
+        var t=x[0];
+        h += '<div class="team'+(x[1]?' won':x[2]?' lost':'')+'"><b>'+dot(t)+esc(nick(t))+(sc?'<span class="score">'+(i===0?sc.away_score:sc.home_score)+'</span>':'')+'</b><small>'+(byTeam[t]?'👤 '+esc(byTeam[t].join(', ')):(i===0?'away':'home'))+'</small></div>';
+        if(i===0) h+='<div class="at">@</div>';
+      });
+      h += '</div></div>';
+    });
+    var bye = Object.keys(S.teams).filter(function(t){ return !games.some(function(g){return g[1]===t||g[2]===t;}); });
+    if (bye.length) h += '<h3>On bye this week</h3><div class="chips">'+bye.map(function(t){return '<span class="t">'+dot(t)+esc(nick(t))+'</span>';}).join('')+'</div>';
+    h += '</div>';
+    $('games').innerHTML = h;
+  }
+
+  // ---- rules ----
+  function renderRules(){
+    var r = S.rules;
+    $('rules').innerHTML = '<div class="card"><h2>How it works</h2><ul class="rules">'+
+      '<li>Everyone puts in '+(S.buy_in?'<b>'+money(S.buy_in)+'</b>':'the buy-in')+'. '+esc(S.commissioner||'The commissioner')+' holds the money and pays the winner.</li>'+
+      '<li>Each week, pick <b>one NFL team to win</b> their game. Just win — points don’t matter.</li>'+
+      '<li>If your team wins, you survive. If they lose, you’re out'+(r.strikes>1?' after '+r.strikes+' losses':'')+'.</li>'+
+      '<li>You can only use each team <b>once</b> all season.</li>'+
+      '<li>Picks lock when that team’s game kicks off. You can change your pick any time before then.</li>'+
+      '<li>Forget to pick'+(r.missed_pick==='loss'?'? That counts as a loss.':'? You just sit that week out.')+'</li>'+
+      '<li>A tie counts as a '+(r.tie==='win'?'win':'loss')+'.</li>'+
+      (r.all_out_reset?'<li>If <b>everyone</b> still alive loses in the same week, nobody is out — play on.</li>':'')+
+      '<li>Last one standing wins the whole pot. If more than one person survives Week 18, they split it.</li></ul>'+
+      '<h3>Tips</h3><ul class="rules"><li>Don’t burn the best teams early — save a couple for late in the season when the easy picks run out.</li>'+
+      '<li>Thursday games lock early. Pick before Thursday night if you like a Thursday team.</li></ul></div>';
+  }
+
+  // ---- admin ----
+  var ADMIN_PIN = null; try{ ADMIN_PIN = sessionStorage.getItem('surv_admin'); }catch(e){}
+  function adminApi(op, extra){ var b = Object.assign({op:op, admin_pin:ADMIN_PIN}, extra||{}); return api('/api/admin', b); }
+  function renderAdmin(){
+    var el = $('admin');
+    if (!ADMIN_PIN){
+      el.innerHTML = '<div class="card center"><h2>Commissioner sign-in</h2><p>Enter the admin PIN.</p><input class="pin" id="apin" type="tel" inputmode="numeric" maxlength="8"><div class="err" id="aerr"></div><button class="btn" id="ago">Sign in</button></div>';
+      var go=function(){ var pin=$('apin').value.trim(); api('/api/admin',{op:'check',admin_pin:pin}).then(function(){ ADMIN_PIN=pin; try{sessionStorage.setItem('surv_admin',pin);}catch(e){} renderAdmin(); }).catch(function(e){ $('aerr').textContent=e.message; }); };
+      $('ago').onclick=go; $('apin').addEventListener('keydown',function(e){ if(e.key==='Enter') go(); });
+      return;
+    }
+    var weeks=[]; for(var w=1;w<=18;w++) weeks.push(w);
+    var teamOpts = function(week, sel){ var gs=(S.schedule[String(week)]||[]); var ts=[]; gs.forEach(function(g){ ts.push(g[1],g[2]); }); ts.sort(); return '<option value="">— none —</option>'+ts.map(function(t){return '<option'+(t===sel?' selected':'')+'>'+t+'</option>';}).join(''); };
+    var h = '<div class="card"><h2>Pool settings</h2>'+
+      '<label class="lbl">Pool name</label><input class="txt" id="s_name" value="'+esc(S.name)+'">'+
+      '<label class="lbl">Commissioner</label><input class="txt" id="s_comm" value="'+esc(S.commissioner)+'">'+
+      '<label class="lbl">Contact (shown to players, e.g. "text Zeke 555-1234")</label><input class="txt" id="s_contact" value="'+esc(S.contact)+'">'+
+      '<label class="lbl">Buy-in per person ($)</label><input class="txt" id="s_buyin" type="number" value="'+esc(S.buy_in)+'">'+
+      '<label class="lbl">Rules</label><div class="row">'+
+      '<label>Tie = <select class="txt" id="r_tie" style="width:auto"><option value="loss"'+(S.rules.tie!=='win'?' selected':'')+'>loss</option><option value="win"'+(S.rules.tie==='win'?' selected':'')+'>win</option></select></label>'+
+      '<label>Missed pick = <select class="txt" id="r_miss" style="width:auto"><option value="loss"'+(S.rules.missed_pick!=='skip'?' selected':'')+'>loss (out)</option><option value="skip"'+(S.rules.missed_pick==='skip'?' selected':'')+'>skip week</option></select></label>'+
+      '<label>Lives <select class="txt" id="r_strikes" style="width:auto">'+[1,2,3].map(function(n){return '<option'+(Number(S.rules.strikes||1)===n?' selected':'')+'>'+n+'</option>';}).join('')+'</select></label>'+
+      '<label><input type="checkbox" id="r_reset"'+(S.rules.all_out_reset!==false?' checked':'')+'> If everyone alive loses, nobody is out</label></div>'+
+      '<div class="row" style="margin-top:8px"><label><input type="checkbox" id="r_hide"'+(S.rules.hide_picks?' checked':'')+'> Hide everyone’s picks until each game kicks off</label>'+
+      '<label><input type="checkbox" id="r_signups"'+(S.rules.signups_open!==false?' checked':'')+'> Allow new people to create accounts</label></div>'+
+      '<button class="btn small" id="s_save">Save settings</button> <span id="s_msg" class="muted"></span></div>';
+
+    h += '<div class="card"><h2>Players</h2><p class="muted" style="font-size:14px">People create their own account (name + PIN) on the site. If someone forgets their PIN, <b>Set</b> gives them a new one or <b>Reset</b> clears it so they can re-create it with the same name.</p><div class="scroll"><table><thead><tr><th>Name</th><th>Status</th><th>Paid</th><th>PIN</th><th>Wk '+cw+' pick</th><th></th></tr></thead><tbody>';
+    S.players.forEach(function(p){
+      h += '<tr data-id="'+p.id+'"><td>'+esc(p.name)+'</td><td>'+(p.eliminated_week!=null?'Out wk '+p.eliminated_week:'Alive')+'</td>'+
+        '<td><input type="checkbox" class="paid"'+(p.paid?' checked':'')+'></td>'+
+        '<td>'+(p.has_pin?'set':'<span class="muted">none</span>')+' <button class="btn small secondary setpin">Set</button>'+(p.has_pin?'<button class="btn small secondary resetpin">Reset</button>':'')+'</td>'+
+        '<td><select class="txt pick" style="width:auto">'+teamOpts(cw, p.picks[W]==='?'?null:p.picks[W])+'</select></td>'+
+        '<td><button class="btn small danger rm">Remove</button></td></tr>';
+    });
+    h += '</tbody></table></div><label class="lbl">Pre-add names (optional, comma-separated) — they’ll set a PIN when they create their account</label><div class="row"><input class="txt" id="addnames" placeholder="Grandpa, Aunt Sue, Mike" style="flex:1"><button class="btn small" id="addbtn">Add</button></div><span id="p_msg" class="muted"></span></div>';
+
+    h += '<div class="card"><h2>Scores & schedule</h2><p class="muted" style="font-size:14px">Scores pull from ESPN automatically whenever anyone opens the site during games. Use these if something looks off.</p>'+
+      '<div class="row"><label>Week <select class="txt" id="rs_week" style="width:auto">'+weeks.map(function(w){return '<option'+(w===cw?' selected':'')+'>'+w+'</option>';}).join('')+'</select></label>'+
+      '<button class="btn small" id="rs_btn">Pull scores from ESPN now</button></div>'+
+      '<h3>Manual result (if ESPN is wrong)</h3><div class="row"><input class="txt" id="mr_week" type="number" placeholder="Week" style="width:80px" value="'+cw+'"><input class="txt" id="mr_away" placeholder="Away (e.g. KC)" style="width:120px"><input class="txt" id="mr_as" type="number" placeholder="Score" style="width:80px"><input class="txt" id="mr_home" placeholder="Home" style="width:120px"><input class="txt" id="mr_hs" type="number" placeholder="Score" style="width:80px"><button class="btn small" id="mr_btn">Set final</button></div>'+
+      '<h3>Kickoff times</h3><button class="btn small secondary" id="sched_btn">Re-pull full schedule from ESPN</button> <span class="muted" style="font-size:14px">(do this in December when Weeks 16–18 times get set)</span>'+
+      '<h3>Admin PIN</h3><div class="row"><input class="txt" id="newpin" type="tel" placeholder="New admin PIN" style="width:160px"><button class="btn small secondary" id="pin_btn">Change</button></div>'+
+      '<div id="t_msg" class="muted"></div></div>';
+    h += '<div class="card"><h2>Recent activity</h2><div id="logbox" class="muted" style="font-size:14px">Loading…</div></div>';
+    el.innerHTML = h;
+
+    var msg=function(id,t,err){ var e=$(id); e.textContent=t; e.style.color=err?'var(--loss)':''; };
+    var refresh=function(){ return loadState(); };
+    $('s_save').onclick=function(){ adminApi('settings',{name:$('s_name').value,commissioner:$('s_comm').value,contact:$('s_contact').value,buy_in:$('s_buyin').value,rules:{tie:$('r_tie').value,missed_pick:$('r_miss').value,strikes:$('r_strikes').value,all_out_reset:$('r_reset').checked,hide_picks:$('r_hide').checked,signups_open:$('r_signups').checked}}).then(function(){ msg('s_msg','Saved.'); refresh(); }).catch(function(e){ msg('s_msg',e.message,true); }); };
+    $('addbtn').onclick=function(){ adminApi('add_player',{names:$('addnames').value}).then(function(r){ msg('p_msg','Added: '+r.added.join(', ')); refresh(); }).catch(function(e){ msg('p_msg',e.message,true); }); };
+    el.querySelectorAll('tr[data-id]').forEach(function(tr){
+      var id=Number(tr.dataset.id), name=tr.children[0].textContent;
+      tr.querySelector('.paid').onchange=function(e){ adminApi('set_paid',{player_id:id,paid:e.target.checked}).catch(function(err){ msg('p_msg',err.message,true); }); };
+      var rp=tr.querySelector('.resetpin'); if(rp) rp.onclick=function(){ if(!confirm('Clear '+name+'’s PIN? They can then re-create their account with the same name and a new PIN.')) return; adminApi('set_pin',{player_id:id,pin:null}).then(refresh).catch(function(err){ msg('p_msg',err.message,true); }); };
+      tr.querySelector('.setpin').onclick=function(){ var np=prompt('New 4-digit PIN for '+name+':'); if(np==null) return; adminApi('set_pin',{player_id:id,pin:np.trim()}).then(function(){ msg('p_msg','PIN set for '+name+'.'); refresh(); }).catch(function(err){ msg('p_msg',err.message,true); }); };
+      tr.querySelector('.pick').onchange=function(e){ var t=e.target.value; (t?adminApi('set_pick',{player_id:id,week:cw,team:t}):adminApi('clear_pick',{player_id:id,week:cw})).then(function(){ msg('p_msg','Pick updated for '+name+'.'); refresh(); }).catch(function(err){ msg('p_msg',err.message,true); }); };
+      tr.querySelector('.rm').onclick=function(){ if(!confirm('Remove '+name+' from the pool? This deletes their picks.')) return; adminApi('remove_player',{player_id:id}).then(refresh); };
+    });
+    $('rs_btn').onclick=function(){ msg('t_msg','Fetching…'); adminApi('refresh_scores',{week:$('rs_week').value}).then(function(r){ msg('t_msg','Updated '+r.games+' games.'); refresh(); }).catch(function(e){ msg('t_msg',e.message,true); }); };
+    $('mr_btn').onclick=function(){ adminApi('set_result',{week:$('mr_week').value,away:$('mr_away').value,home:$('mr_home').value,away_score:$('mr_as').value,home_score:$('mr_hs').value}).then(function(){ msg('t_msg','Result saved.'); refresh(); }).catch(function(e){ msg('t_msg',e.message,true); }); };
+    $('sched_btn').onclick=function(){ msg('t_msg','Pulling all 18 weeks… (about 20 seconds)'); adminApi('refresh_schedule').then(function(r){ msg('t_msg','Schedule refreshed ('+r.games+' games).'); refresh(); }).catch(function(e){ msg('t_msg',e.message,true); }); };
+    $('pin_btn').onclick=function(){ var np=$('newpin').value.trim(); adminApi('set_admin_pin',{new_pin:np}).then(function(){ ADMIN_PIN=np; try{sessionStorage.setItem('surv_admin',np);}catch(e){} msg('t_msg','Admin PIN changed.'); }).catch(function(e){ msg('t_msg',e.message,true); }); };
+    adminApi('log').then(function(r){ $('logbox').innerHTML = (r.log||[]).slice(0,40).map(function(l){ return '<div>'+new Date(l.at).toLocaleString()+' · <b>'+esc(l.who)+'</b> '+esc(l.action)+' '+esc(JSON.stringify(l.detail||{}))+'</div>'; }).join('')||'Nothing yet.'; }).catch(function(){ $('logbox').textContent='—'; });
+  }
+
+  // ---- boot ----
+  loadState().catch(function(e){ $('loading').innerHTML='<b>Couldn’t load the pool.</b><br><span class="muted">'+esc(e.message)+'</span><br><button class="btn small" onclick="location.reload()">Try again</button>'; });
+  // keep scores fresh while the page is open
+  setInterval(function(){ if(document.visibilityState==='visible' && !$('modal').classList.contains('on')) loadState().catch(function(){}); }, 120000);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible' && S) loadState().catch(function(){}); });
+})();
+</script>
+</body>
+</html>
