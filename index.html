@@ -208,8 +208,8 @@
     if (!ME){ $('nav').style.display='none'; $('who').innerHTML=''; renderSignin(); show('signin'); }
     else {
       $('nav').style.display='flex';
-      $('who').innerHTML = 'Hi, <b>'+esc(ME.name)+'</b><br><a href="#" id="switch">Not you?</a>';
-      $('switch').onclick=function(e){ e.preventDefault(); saveMe(null); loadState(); };
+      $('who').innerHTML = 'Hi, <b>'+esc(ME.name)+'</b><br><a href="#" id="switch">Sign out</a>';
+      $('switch').onclick=function(e){ e.preventDefault(); signOut(); };
       renderHome(); renderEveryone(); renderGames(); renderRules();
       var cur = document.querySelector('section.on');
       if (!cur || cur.id==='signin' || cur.id==='admin') show('home');
@@ -219,6 +219,7 @@
   }
   window.addEventListener('hashchange', function(){ if(S) renderAll(); });
 
+  function signOut(){ saveMe(null); changing=false; closeModal(); loadState(); }
   // ---- sign in (PIN only) / create account ----
   function finishLogin(r, pin){ saveMe({id:r.player_id,name:r.name,pin:pin}); return loadState(); }
   function renderSignin(){
@@ -331,7 +332,9 @@
         return '<span class="t '+r+'">'+dot(t)+esc(nick(t))+' <small>wk '+w+(r==='W'?' ✓':r==='L'?' ✗':r==='T'?' =':'')+'</small></span>';
       }).join('')+'</div></div>';
     }
+    h += '<button class="btn secondary" id="signout">Sign out of '+esc(ME.name)+'’s account</button><p class="muted center" style="font-size:14px">Sign out if you’re on someone else’s phone. You’ll just need your PIN to get back in.</p>';
     $('home').innerHTML = h;
+    $('signout').onclick=signOut;
     var ch=$('change'); if(ch) ch.onclick=function(){ changing=true; renderHome(); };
     var cc=$('cancelchange'); if(cc) cc.onclick=function(){ changing=false; renderHome(); };
     $('home').querySelectorAll('.team:not(.dis)').forEach(function(b){ b.onclick=function(){ confirmPick(b.dataset.t); }; });
